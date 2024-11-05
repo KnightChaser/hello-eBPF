@@ -1,2 +1,4 @@
 *.o
 *.json
+
+vmlinux.h
