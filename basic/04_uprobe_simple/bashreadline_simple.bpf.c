@@ -12,7 +12,6 @@ int BPF_KRETPROBE(printret, const void *ret) {
     char str[MAX_LINE_SIZE];
     char comm[TASK_COMM_LEN];
     u32 pid;
-    u32 uid;
 
     if (!ret)
         return 0;
@@ -20,11 +19,9 @@ int BPF_KRETPROBE(printret, const void *ret) {
     bpf_get_current_comm(&comm, sizeof(comm));
 
     pid = bpf_get_current_pid_tgid() >> 32;
-    uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;
     bpf_probe_read_user_str(str, sizeof(str), ret);
 
-    bpf_printk("PID %d (UID %d, CMD: %s) read: %s", pid, uid, comm, str);
+    bpf_printk("PID %d (%s) read: %s ", pid, comm, str);
 
     return 0;
 }
-
