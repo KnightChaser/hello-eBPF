@@ -11,19 +11,21 @@ SEC("uretprobe//bin/bash:readline")
 int BPF_KRETPROBE(printret, const void *ret) {
     char str[MAX_LINE_SIZE];
     char comm[TASK_COMM_LEN];
-    u32 pid;
-    u32 uid;
+    u32 pid, uid;
 
     if (!ret)
         return 0;
 
     bpf_get_current_comm(&comm, sizeof(comm));
-
     pid = bpf_get_current_pid_tgid() >> 32;
-    uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;
+    uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;  // Extract UID
+
     bpf_probe_read_user_str(str, sizeof(str), ret);
 
-    bpf_printk("PID %d (UID %d, CMD: %s) read: %s", pid, uid, comm, str);
+    // Split the message across two print calls to avoid argument limits
+    // Geenrally, bpf_printk() receives up to 3 arguments at once :(
+    bpf_printk("UID %d, PID %d (%s)", uid, pid, comm);
+    bpf_printk("Command: %s", str);
 
     return 0;
 }
