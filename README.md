@@ -1,4 +1,6 @@
-# hello-eunomia-bpf
+# hello-eBPF
+
+Playing with eBPF on Linux, which enables you to see deep internals of Linux system :)
 
 ## Note
 
