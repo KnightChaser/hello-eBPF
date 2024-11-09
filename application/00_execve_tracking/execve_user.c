@@ -23,14 +23,12 @@ struct event {
 static volatile sig_atomic_t exiting = 0;
 
 // Signal handler for graceful termination
-static void handle_signal(int sig)
-{
+static void handle_signal(int sig) {
     exiting = 1;
 }
 
 // Callback function to handle events from the ring buffer
-static int handle_event(void *ctx, void *data, size_t data_sz)
-{
+static int handle_event(void *ctx, void *data, size_t data_sz) {
     struct event *e = data;
     struct passwd pwd, *pwd_p;
     char username[256];
@@ -47,10 +45,8 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
            e->pid, username, e->uid, e->comm, e->filename, e->argc);
 
     if (e->argc > 0) {
-        printf("Arguments:");
         for (__u32 index = 0; index < e->argc; index++)
-            printf(" %s", e->args[index]);
-        printf("\n");
+            printf(" argv[%d]: %s\n", index, e->args[index]);
     }
 
     return 0;
@@ -89,10 +85,9 @@ int main(int argc, char* argv[]) {
     }
 
     // Attach the eBPF program to the tracepoint
-    link = bpf_program__attach_tracepoint(prog, "syscalls", "sys_enter_execve");
+    link = bpf_program__attach(prog);
     if (libbpf_get_error(link)) {
-        fprintf(stderr, "Failed to attach eBPF program to tracepoint\n");
-        link = NULL;
+        fprintf(stderr, "Failed to attach eBPF program\n");
         goto cleanup;
     }
 

@@ -29,6 +29,8 @@ static __always_inline int read_user_string(char *dst, int dst_size, unsigned lo
 }
 
 // Tracepoint for sys_enter_execve
+// execve(2) spec:
+//     int execve(const char *filename, char *const argv[], char *const envp[]);
 SEC("tracepoint/syscalls/sys_enter_execve")
 int trace_execve(struct trace_event_raw_sys_enter *ctx) {
     struct event *e;
@@ -40,24 +42,17 @@ int trace_execve(struct trace_event_raw_sys_enter *ctx) {
     if (!e)
         return 0;
 
-    // Initialize argc
+    // Gather data
     e->argc = 0;
-
-    // Get current PID and UID
     e->pid = bpf_get_current_pid_tgid() >> 32;
     e->uid = bpf_get_current_uid_gid() >> 32;
-
-    // Get the command name
-    bpf_get_current_comm(&e->comm, sizeof(e->comm));
-
-    // Extract the filename argument from execve (first argument)
+    bpf_get_current_comm(&e->comm, sizeof(e->comm));            // commandline
     filename = (const char *)ctx->args[0];
     bpf_probe_read_user_str(&e->filename, sizeof(e->filename), filename);
 
     // Extract the argv array (second argument)
-    argv = (const char *const *)ctx->args[1];
-
     // Iterate over the argv array and capture arguments
+    argv = (const char *const *)ctx->args[1];
     for (u32 index = 0; index < MAX_ARGS; index++) {
         const char *arg;
 
