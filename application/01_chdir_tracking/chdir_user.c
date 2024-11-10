@@ -9,6 +9,10 @@
 
 #define MAX_FILENAME_LEN 256 
 
+#define RED "\033[1;31m"
+#define GREEN "\033[1;32m"
+#define RESET "\033[0m"
+
 // Structure for storing chdir result information
 struct chdir_event {
     __u32 pid;
@@ -59,9 +63,9 @@ static int handle_event(void *ctx, void *data, size_t data_sz) {
     }
 
     if (e->success) {
-        printf("[+] chdir: %s (PID: %d, UID: %s)\n", e->filename, e->pid, username);
+        printf(GREEN "[+] chdir: %s (PID: %d, UID: %s)\n" RESET, e->filename, e->pid, username);
     } else {
-        printf("[-] chdir: %s (PID: %d, UID: %s)\n", e->filename, e->pid, username);
+        printf(RED "[-] chdir: %s (PID: %d, UID: %s)\n" RESET, e->filename, e->pid, username);
     }
 
     return 0;
