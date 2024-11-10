@@ -32,7 +32,7 @@ struct chdir_info {
 
 struct {
     __uint(type, BPF_MAP_TYPE_HASH);
-    __type(key, u32);
+    __type(key, u64);
     __type(value, struct chdir_info);
     __uint(max_entries, 1024);
 } chdir_map SEC(".maps");
@@ -51,7 +51,7 @@ int tracepoint__syscalls__sys_enter_chdir(struct trace_event_raw_sys_enter *ctx)
         return 0;
     }
 
-    bpf_map_update_elem(&chdir_map, &pid, &info, BPF_ANY);
+    bpf_map_update_elem(&chdir_map, &id, &info, BPF_ANY);
     
     return 0;
 }
@@ -62,7 +62,7 @@ int tracepoint__syscalls__sys_exit_chdir(struct trace_event_raw_sys_exit *ctx) {
     u32 pid = id >> 32;
     u32 uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;
 
-    struct chdir_info *info = bpf_map_lookup_elem(&chdir_map, &pid);
+    struct chdir_info *info = bpf_map_lookup_elem(&chdir_map, &id);
     if (!info)
         return 0;
 
@@ -82,7 +82,7 @@ int tracepoint__syscalls__sys_exit_chdir(struct trace_event_raw_sys_exit *ctx) {
     bpf_ringbuf_submit(chdir_event, 0);
 
     // Remove the entry from the map since we don't need it anymore
-    bpf_map_delete_elem(&chdir_map, &pid);
+    bpf_map_delete_elem(&chdir_map, &id);
     
     return 0;
 }

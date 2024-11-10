@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <pwd.h>
 
 #define MAX_FILENAME_LEN 256 
@@ -24,9 +25,28 @@ static void handle_signal(int sig) {
     exiting = 1;
 }
 
+// Hold the latest event for duplication handling
+// Generally, failed chdir attempts generate the same duplicated failed logs (same PID)
+static struct chdir_event last_event;
+static bool first_event = true;
+
 // Callback function to handle events from the ring buffer
 static int handle_event(void *ctx, void *data, size_t data_sz) {
     struct chdir_event *e = data;
+
+    if (!first_event &&
+        e->pid == last_event.pid &&
+        e->uid == last_event.uid &&
+        e->success == last_event.success &&
+        strcmp(e->filename, last_event.filename) == 0) {
+            // Skip duplicated event
+            return 0;
+        }
+
+    // Update the last event
+    last_event = *e;
+    first_event = false;
+
     struct passwd pwd, *pwd_p;
     char username[256]; 
     int ret;
