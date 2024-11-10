@@ -1,6 +1,8 @@
+// chdir.bpf.c
 #include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
+#include <bpf/bpf_core_read.h>
 
 char LICENSE[] SEC("license") = "GPL";
 
@@ -8,6 +10,21 @@ char LICENSE[] SEC("license") = "GPL";
 
 const volatile int pid_target = 0;
 
+// Structure for storing chdir result information
+struct chdir_event {
+    u32 pid;
+    u32 uid;
+    char filename[MAX_FILENAME_LEN];
+    bool success;
+};
+
+// Define a ring buffer to send chdir events to user-space
+struct {
+    __uint(type, BPF_MAP_TYPE_RINGBUF);
+    __uint(max_entries, 4096);
+} chdir_events SEC(".maps");
+
+// Define the hash map for pairing sys_enter_chdir and sys_exit_chdir
 struct chdir_info {
     u32 uid;
     char filename[MAX_FILENAME_LEN];
@@ -31,7 +48,6 @@ int tracepoint__syscalls__sys_enter_chdir(struct trace_event_raw_sys_enter *ctx)
     info.uid = uid;
 
     if (bpf_probe_read_user_str(info.filename, sizeof(info.filename), filename) < 0) {
-        bpf_printk("Failed to read filename from PID: %d/UID: %d\n", pid, uid);
         return 0;
     }
 
@@ -52,10 +68,18 @@ int tracepoint__syscalls__sys_exit_chdir(struct trace_event_raw_sys_exit *ctx) {
 
     long ret = ctx->ret;
 
-    if (ret == 0)
-        bpf_printk("PID %d (UID: %d) successfully changed the working directory to %s\n", pid, uid, info->filename);
-    else
-        bpf_printk("PID %d (UID: %d) failed to change the working directory to %s\n", pid, uid, info->filename);
+    // Prepare the chdir_event structure for the ring buffer
+    struct chdir_event *chdir_event = bpf_ringbuf_reserve(&chdir_events, sizeof(struct chdir_event), 0);
+    if (!chdir_event)
+        return 0;
+
+    chdir_event->pid = pid;
+    chdir_event->uid = info->uid;
+    __builtin_memcpy(chdir_event->filename, info->filename, sizeof(chdir_event->filename));
+    chdir_event->success = (ret == 0);
+
+    // Submit the event to the ring buffer
+    bpf_ringbuf_submit(chdir_event, 0);
 
     // Remove the entry from the map since we don't need it anymore
     bpf_map_delete_elem(&chdir_map, &pid);
