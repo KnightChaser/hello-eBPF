@@ -29,7 +29,7 @@ root@liberra:~/gh-repo/hello-eBPF/application/00_execve_tracking$ pkg-config lib
 ```bash
 ...
 export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
-export PKG_CONFIG_PATH=$PKD_CONFIG_PATH:/usr/lib64/pkgconfig
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/usr/lib64/pkgconfig
 ```
 
 ## Note for newbies like me
