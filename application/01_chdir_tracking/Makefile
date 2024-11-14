@@ -3,11 +3,15 @@
 CC = gcc
 CLANG = clang
 CFLAGS = -O2 -g
-LIBS = -lbpf -lelf -lz
+PKG_CONFIG = pkg-config
+LIBS = -lelf -lz
 
 TARGET = chdir
 BPF_OBJ = $(TARGET).bpf.o
 USER_APP = $(TARGET)_user
+
+LIBBPF_CFLAGS := $(shell $(PKG_CONFIG) --cflags libbpf)
+LIBBPF_LDFLAGS := $(shell $(PKG_CONFIG) --libs libbpf)
 
 all: $(BPF_OBJ) $(USER_APP)
 
@@ -15,7 +19,7 @@ $(BPF_OBJ): $(TARGET).bpf.c
 	$(CLANG) $(CFLAGS) -target bpf -c $< -o $@
 
 $(USER_APP): $(TARGET)_user.c
-	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
+	$(CC) $(CFLAGS) $(LIBBPF_CFLAGS) -o $@ $< $(LIBBPF_LDFLAGS) $(LIBS)
 
 clean:
 	rm -f $(BPF_OBJ)
