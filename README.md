@@ -25,19 +25,11 @@ root@liberra:~/gh-repo/hello-eBPF/application/00_execve_tracking$ pkg-config lib
 -L/usr/lib64 -lbpf
 ```
 
-- While trying to run the compiled eBPF user application binary after `make`, if you encountered the error like `error while loading shared libraries: libbpf.so.1: cannot open shared object file: No such file or directory`, consider adding `libbpf.so.1` path
-  - Add `$LD_LIBRARY_PATH` variable
-
+ While trying to run the compiled eBPF user application binary after `make`, if you encountered the error like `error while loading shared libraries: libbpf.so.1: cannot open shared object file: No such file or directory`, consider adding `libbpf.so.1` path. Since LD libarary(`*.so`) is located in `/usr/lib64` and package library(`*.pc`) is located in `/usr/lib64/pkgconfig/`, Add them to the environment variables for `LD_LIBRARY_PATH` and `PKG_CONFIG_PATH` such like below(such as adding those lines to **`~/.bashrc`**):
 ```bash
-echo 'export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
-source ~/.bashrc
-```
-
-- Add library path to `/etc/ld.so.conf.d`
-
-```bash
-echo "/usr/lib64" | sudo tee /etc/ld.so.conf.d/libbpf.conf
-sudo ldconfig
+...
+export LD_LIBRARY_PATH=/usr/lib64:$LD_LIBRARY_PATH
+export PKG_CONFIG_PATH=$PKD_CONFIG_PATH:/usr/lib64/pkgconfig
 ```
 
 ## Note for newbies like me
