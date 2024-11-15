@@ -21,24 +21,54 @@ static void handle_signal(int sig) {
     exiting = 1;
 }
 
+static const char* tcp_state_to_string(int state) {
+    switch (state) {
+        case 0: return "CLOSE";
+        case 1: return "LISTEN";
+        case 2: return "SYN_SENT";
+        case 3: return "SYN_RECV";
+        case 4: return "ESTABLISHED";
+        case 5: return "FIN_WAIT1";
+        case 6: return "FIN_WAIT2";
+        case 7: return "CLOSE_WAIT";
+        case 8: return "LAST_ACK";
+        case 9: return "TIME_WAIT";
+        case 10: return "CLOSING";
+        default: return "UNKNOWN";
+    }
+}
+
 // Callback function to handle events from the ring buffer
 static int handle_event(void *ctx, void *data, size_t data_sz) {
     struct tcp_event *event = data;
+    tcp_packet_count++;
 
-    // Display the TCP event details
-    printf(GREEN);
-    printf("[%lld] TCP EVENT:\n", tcp_packet_count);
-    printf(RESET);
-    printf("  Task Name: %s\n", event->task_name);
-    printf("  PID: %u\n", event->process_id);
-    printf("  Source Address: %s\n", inet_ntoa((struct in_addr){event->source_address}));
-    printf("  Destination Address: %s\n", inet_ntoa((struct in_addr){event->destination_address}));
-    printf("  Source Port: %u\n", event->source_port);
-    printf("  Destination Port: %u\n", event->destination_port);
-    printf("  Previous(old) State: %d\n", event->old_state);
-    printf("  Current(new) State: %d\n", event->new_state);
-    printf("  Timestamp (us): %llu\n", event->timestamp_us);
-    printf("  Elapsed Time (us): %llu\n", event->elapsed_time_us);
+    char src_addr[INET6_ADDRSTRLEN] = {0};
+    char dst_addr[INET6_ADDRSTRLEN] = {0};
+
+    // Convert source and destination addresses to strings
+    if (event->protocol_family == AF_INET) {
+        inet_ntop(AF_INET, &event->source_address, src_addr, sizeof(src_addr));
+        inet_ntop(AF_INET, &event->destination_address, dst_addr, sizeof(dst_addr));
+    } else if (event->protocol_family == AF_INET6) {
+        inet_ntop(AF_INET6, &event->source_address, src_addr, sizeof(src_addr));
+        inet_ntop(AF_INET6, &event->destination_address, dst_addr, sizeof(dst_addr));
+    }
+
+    // Display the event in a single line
+    printf("[%06llu] %016llx %-25s(%05u) %15s %5u %15s %5u %-12s -> %-12s %10.3f msec\n",
+           tcp_packet_count,                             // PKT
+           event->socket_address,                        // SKADDR
+           event->task_name,                             // C-COMM
+           event->process_id,                            // C-PID
+           src_addr,                                     // LADDR
+           event->source_port,                           // LPORT
+           dst_addr,                                     // RADDR
+           event->destination_port,                      // RPORT
+           tcp_state_to_string(event->old_state),        // OLDSTATE
+           tcp_state_to_string(event->new_state),        // NEWSTATE
+           event->elapsed_time_us / 1000.0               // MS
+    );
 
     return 0;
 }
@@ -98,6 +128,7 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Listening for TCP state change events... Press Ctrl-C to exit\n");
+    printf("PACKET#  SOCKADDR         COMMAND(PROCESS)         PID        SADDR        SPORT  DADDR          DPORT OLDSTATE     -> NEWSTATE          ELAPSED\n");
 
     // Poll the ring buffer for events
     while (!exiting) {

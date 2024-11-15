@@ -88,12 +88,22 @@ int handle_socket_state_change(struct trace_event_raw_inet_sock_set_state *conte
     bpf_get_current_comm(&socket_event->task_name, sizeof(socket_event->task_name));
 
     if (protocol_family == IPV4_FAMILY) {
-        bpf_probe_read_kernel(&socket_event->source_address, sizeof(socket_event->source_address), &socket->__sk_common.skc_rcv_saddr);
-        bpf_probe_read_kernel(&socket_event->destination_address, sizeof(socket_event->destination_address), &socket->__sk_common.skc_daddr);
+        bpf_probe_read_kernel(&socket_event->source_address, 
+                              sizeof(socket_event->source_address), 
+                              &socket->__sk_common.skc_rcv_saddr);
+
+        bpf_probe_read_kernel(&socket_event->destination_address, 
+                              sizeof(socket_event->destination_address), 
+                              &socket->__sk_common.skc_daddr);
     } else {
         // IPv6 family
-        bpf_probe_read_kernel(&socket_event->source_address, sizeof(socket_event->source_address), &socket->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
-        bpf_probe_read_kernel(&socket_event->destination_address, sizeof(socket_event->destination_address), &socket->__sk_common.skc_v6_daddr.in6_u.u6_addr32);
+        bpf_probe_read_kernel(&socket_event->source_address, 
+                              sizeof(socket_event->source_address), 
+                              &socket->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr32);
+
+        bpf_probe_read_kernel(&socket_event->destination_address, 
+                              sizeof(socket_event->destination_address), 
+                              &socket->__sk_common.skc_v6_daddr.in6_u.u6_addr32);
     }
 
     bpf_ringbuf_submit(socket_event, 0);
