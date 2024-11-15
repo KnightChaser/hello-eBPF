@@ -12,9 +12,9 @@ sudo apt install linux-headers-$(uname -r) clang llvm libbpf-dev gcc-multilib ma
 bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
 ```
 
-It requires [`libbpf`](https://github.com/libbpf/libbpf) with `1.0.0` or later version(preferably, `v1.5.0`) to make the codes compatible with Ubuntu kernel version 6, not only 5.
+It requires [`libbpf`](https://github.com/libbpf/libbpf) with `1.0.0` or later version(preferably, `v1.5.0` or later) to make the codes compatible with Ubuntu kernel version 6, not only 5.
 
-- Make sure about the version
+Make sure about the version
 
 ```bash
 root@liberra:~/gh-repo/hello-eBPF/application/00_execve_tracking$ locate pkgconfig | grep libbpf
@@ -25,10 +25,12 @@ root@liberra:~/gh-repo/hello-eBPF/application/00_execve_tracking$ pkg-config lib
 -L/usr/lib64 -lbpf
 ```
 
- While trying to run the compiled eBPF user application binary after `make`, if you encountered the error like `error while loading shared libraries: libbpf.so.1: cannot open shared object file: No such file or directory`, Make sure `/etc/ld.so.conf.d/libbpf.conf` includes `/usr/lib64`, and then update the cache, so build tools like `make` can easily find `libbpf`, without needing some doing with `~/.bashrc`
+If the version is not properly upgraded, use the following shell script so the package manager can correctly direct the intended version of `libbpf` package.
 ```bash
+echo 'export PKG_CONFIG_PATH=/usr/lib64/pkgconfig:$PKG_CONFIG_PATH' >> ~/.bashrc
 echo "/usr/lib64" | sudo tee /etc/ld.so.conf.d/libbpf.conf
 sudo ldconfig
+source ~/.bashrc
 ```
 
 ## Note for newbies like me
